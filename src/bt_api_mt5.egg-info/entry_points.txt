@@ -1,0 +1,2 @@
+[bt_api.plugins]
+mt5 = bt_api_mt5.plugin:register_plugin

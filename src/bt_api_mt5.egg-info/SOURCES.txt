@@ -1,0 +1,11 @@
+pyproject.toml
+src/bt_api_mt5/__init__.py
+src/bt_api_mt5/plugin.py
+src/bt_api_mt5.egg-info/PKG-INFO
+src/bt_api_mt5.egg-info/SOURCES.txt
+src/bt_api_mt5.egg-info/dependency_links.txt
+src/bt_api_mt5.egg-info/entry_points.txt
+src/bt_api_mt5.egg-info/requires.txt
+src/bt_api_mt5.egg-info/top_level.txt
+src/bt_api_mt5/gateway/__init__.py
+src/bt_api_mt5/gateway/adapter.py
