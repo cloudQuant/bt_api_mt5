@@ -18,3 +18,34 @@ mt5 = "bt_api_mt5.plugin:register_plugin"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py39"
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "N",   # pep8-naming
+    "UP",  # pyupgrade
+    "B",   # flake8-bugbear (includes B904 raise-from)
+    "C4",  # flake8-comprehensions
+    "SIM", # flake8-simplify
+    "TCH", # flake8-type-checking
+    "RUF100",  # unused noqa directives
+    "S",   # flake8-bandit security
+    "PERF",  # perflint performance
+    "PIE790",  # no-unnecessary-pass
+]
+ignore = [
+    "E501",  # line too long (handled by formatter)
+    "B008",  # do not perform function calls in argument defaults
+    "PERF401",  # existing for-loop patterns for list building
+]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
