@@ -1,5 +1,5 @@
 site_name: "MetaTrader 5 Documentation"
-site_description: "MetaTrader 5 plugin for bt_api"
+site_description: "MetaTrader 5 gateway adapter for bt_api"
 site_author: cloudQuant
 site_url: https://bt-api-mt5.readthedocs.io/
 
@@ -25,6 +25,16 @@ theme:
         icon: material/weather-sunny
         name: Switch to light mode
 
+plugins:
+  - search:
+      lang:
+        - en
+        - zh
+  - i18n:
+      docs_structure: folder
+      reconfigure_material: true
+      reconfigure_search: true
+
 nav:
   - Home: index.md
 
@@ -33,3 +43,9 @@ markdown_extensions:
   - pymdownx.superfences
   - admonition
   - tables
+  - toc:
+      permalink: true
+
+i18n:
+  alternate_name: 中文
+  default_name: English

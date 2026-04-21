@@ -297,7 +297,7 @@ class Mt5GatewayAdapter(BaseGatewayAdapter):
 
     async def _async_connect(self) -> None:
         pymt5 = importlib.import_module("pymt5")
-        mt5_web_client = getattr(pymt5, "MT5WebClient")
+        mt5_web_client = pymt5.MT5WebClient
 
         client_kwargs: dict[str, Any] = {
             "auto_reconnect": self._auto_reconnect,
