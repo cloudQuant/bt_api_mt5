@@ -26,14 +26,19 @@ theme:
         name: Switch to light mode
 
 plugins:
-  - search:
-      lang:
-        - en
-        - zh
+  - search
   - i18n:
-      docs_structure: folder
+      docs_structure: suffix
+      fallback_to_default: true
       reconfigure_material: true
       reconfigure_search: true
+      languages:
+        en:
+          name: English
+          build: true
+        zh:
+          name: 中文
+          build: true
 
 nav:
   - Home: index.md
@@ -45,7 +50,3 @@ markdown_extensions:
   - tables
   - toc:
       permalink: true
-
-i18n:
-  alternate_name: 中文
-  default_name: English
