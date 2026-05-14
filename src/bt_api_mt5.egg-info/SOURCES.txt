@@ -1,4 +1,10 @@
+.gitignore
+.readthedocs.yaml
+README.md
+mkdocs.yml
 pyproject.toml
+.github/workflows/ci.yml
+docs/index.md
 src/bt_api_mt5/__init__.py
 src/bt_api_mt5/plugin.py
 src/bt_api_mt5.egg-info/PKG-INFO
@@ -7,5 +13,13 @@ src/bt_api_mt5.egg-info/dependency_links.txt
 src/bt_api_mt5.egg-info/entry_points.txt
 src/bt_api_mt5.egg-info/requires.txt
 src/bt_api_mt5.egg-info/top_level.txt
+src/bt_api_mt5/__pycache__/__init__.cpython-311.pyc
+src/bt_api_mt5/__pycache__/plugin.cpython-311.pyc
 src/bt_api_mt5/gateway/__init__.py
 src/bt_api_mt5/gateway/adapter.py
+src/bt_api_mt5/gateway/__pycache__/__init__.cpython-311.pyc
+src/bt_api_mt5/gateway/__pycache__/adapter.cpython-311.pyc
+tests/conftest.py
+tests/test_mt5_plugin_registration.py
+tests/__pycache__/conftest.cpython-311-pytest-8.3.3.pyc
+tests/__pycache__/test_mt5_adapter.cpython-311-pytest-8.3.3.pyc

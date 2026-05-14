@@ -1,10 +1,12 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING
 
-from bt_api_base.gateway.registrar import GatewayRuntimeRegistrar
+if TYPE_CHECKING:
+    from bt_api_base.gateway.registrar import GatewayRuntimeRegistrar
+    from bt_api_base.registry import ExchangeRegistry
+
 from bt_api_base.plugins.protocol import PluginInfo
-from bt_api_base.registry import ExchangeRegistry
 
 from bt_api_mt5 import __version__
 from bt_api_mt5.gateway.adapter import Mt5GatewayAdapter
