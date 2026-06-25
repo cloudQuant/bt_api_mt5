@@ -54,6 +54,38 @@ _RETCODE_STATUS: dict[int, str] = {
 }
 
 
+def _coerce_epoch_seconds(value: Any, default: float = 0.0) -> float:
+    try:
+        timestamp = float(value)
+    except (TypeError, ValueError):
+        return default
+    if timestamp > 10_000_000_000:
+        timestamp /= 1000.0
+    return timestamp
+
+
+def _coerce_offset_seconds(value: Any) -> int | None:
+    if value in (None, ""):
+        return None
+    try:
+        return int(float(value))
+    except (TypeError, ValueError):
+        return None
+
+
+def _extract_server_offset_seconds(account: Any) -> int | None:
+    if not isinstance(account, dict):
+        return None
+    offset = _coerce_offset_seconds(account.get("server_offset_time"))
+    if offset is not None:
+        return offset
+    offset = _coerce_offset_seconds(account.get("timezone_shift"))
+    if offset is None:
+        return None
+    daylight_mode = _coerce_offset_seconds(account.get("daylight_mode")) or 0
+    return offset + daylight_mode * 3600
+
+
 def _resolve_default_filling() -> int | None:
     try:
         pymt5 = importlib.import_module("pymt5")
@@ -79,6 +111,17 @@ class Mt5GatewayAdapter(BaseGatewayAdapter):
         self._heartbeat_interval = float(kwargs.get("heartbeat_interval") or 30.0)
         self._auto_reconnect = bool(kwargs.get("auto_reconnect", True))
         self._max_reconnect_attempts = int(kwargs.get("max_reconnect_attempts") or 5)
+        self._server_offset_seconds = 0
+        for offset_name in (
+            "server_offset_time",
+            "server_offset_seconds",
+            "server_timezone_offset",
+            "timezone_shift",
+        ):
+            offset = _coerce_offset_seconds(kwargs.get(offset_name))
+            if offset is not None:
+                self._server_offset_seconds = offset
+                break
 
         self._symbol_suffix = str(kwargs.get("symbol_suffix") or "")
         self._symbol_map: dict[str, str] = dict(kwargs.get("symbol_map") or {})
@@ -103,7 +146,7 @@ class Mt5GatewayAdapter(BaseGatewayAdapter):
         future = asyncio.run_coroutine_threadsafe(self._async_connect(), self._loop)
         connect_timeout = max(self._timeout * 4, 120.0)
         future.result(timeout=connect_timeout)
-        self.logger.info("Mt5GatewayAdapter connected (login=%s)", self._login)
+        self.logger.info(f"Mt5GatewayAdapter connected (login={self._login})")
 
     def _require_loop(self) -> asyncio.AbstractEventLoop:
         if self._loop is None:
@@ -120,9 +163,8 @@ class Mt5GatewayAdapter(BaseGatewayAdapter):
                 future.result(timeout=5.0)
             except Exception as exc:
                 self.logger.warning(
-                    "Mt5GatewayAdapter close failed during disconnect: %s: %s",
-                    type(exc).__name__,
-                    exc,
+                    f"Mt5GatewayAdapter close failed during disconnect: "
+                    f"{type(exc).__name__}: {exc}"
                 )
         if self._loop is not None:
             self._loop.call_soon_threadsafe(self._loop.stop)
@@ -235,7 +277,7 @@ class Mt5GatewayAdapter(BaseGatewayAdapter):
         rates = future.result(timeout=self._timeout)
         return [
             {
-                "timestamp": float(rate.get("time", 0)),
+                "timestamp": self._server_time_to_utc_timestamp(rate.get("time", 0)),
                 "open": float(rate.get("open", 0)),
                 "high": float(rate.get("high", 0)),
                 "low": float(rate.get("low", 0)),
@@ -313,6 +355,7 @@ class Mt5GatewayAdapter(BaseGatewayAdapter):
         self._client = mt5_web_client(**client_kwargs)
         await self._client.connect()
         await self._client.login(login=self._login, password=self._password)
+        await self._refresh_server_offset()
         symbol_count = await self._load_symbol_cache()
         logger.info("MT5 symbol cache loaded: %d symbols", symbol_count)
 
@@ -322,33 +365,29 @@ class Mt5GatewayAdapter(BaseGatewayAdapter):
             self._client.on_trade_transaction(self._on_transaction_push)
         except Exception as exc:
             self.logger.warning(
-                "Mt5GatewayAdapter failed to register trade transaction callback: %s: %s",
-                type(exc).__name__,
-                exc,
+                f"Mt5GatewayAdapter failed to register trade transaction callback: "
+                f"{type(exc).__name__}: {exc}"
             )
         try:
             self._client.on_trade_result(self._on_trade_result_push)
         except Exception as exc:
             self.logger.warning(
-                "Mt5GatewayAdapter failed to register trade result callback: %s: %s",
-                type(exc).__name__,
-                exc,
+                f"Mt5GatewayAdapter failed to register trade result callback: "
+                f"{type(exc).__name__}: {exc}"
             )
         try:
             self._client.on_order_update(self._on_order_update_push)
         except Exception as exc:
             self.logger.warning(
-                "Mt5GatewayAdapter failed to register order update callback: %s: %s",
-                type(exc).__name__,
-                exc,
+                f"Mt5GatewayAdapter failed to register order update callback: "
+                f"{type(exc).__name__}: {exc}"
             )
         try:
             self._client.on_position_update(self._on_position_update_push)
         except Exception as exc:
             self.logger.warning(
-                "Mt5GatewayAdapter failed to register position update callback: %s: %s",
-                type(exc).__name__,
-                exc,
+                f"Mt5GatewayAdapter failed to register position update callback: "
+                f"{type(exc).__name__}: {exc}"
             )
 
     async def _async_subscribe(
@@ -493,8 +532,15 @@ class Mt5GatewayAdapter(BaseGatewayAdapter):
                     if info is not None:
                         symbol_name = info.name
             standard_symbol = self._to_standard_symbol(symbol_name)
+            raw_timestamp = (
+                tick.get("tick_time_ms")
+                or tick.get("time_msc")
+                or tick.get("tick_time")
+                or tick.get("time")
+                or 0
+            )
             gateway_tick = GatewayTick(
-                timestamp=tick.get("tick_time", 0),
+                timestamp=self._server_time_to_utc_timestamp(raw_timestamp),
                 symbol=standard_symbol,
                 exchange="MT5",
                 asset_type="OTC",
@@ -506,6 +552,35 @@ class Mt5GatewayAdapter(BaseGatewayAdapter):
                 instrument_id=symbol_name,
             )
             self.emit(CHANNEL_MARKET, gateway_tick)
+
+    async def _refresh_server_offset(self) -> None:
+        if self._client is None:
+            return
+        for getter_name in ("terminal_info", "get_account"):
+            getter = getattr(self._client, getter_name, None)
+            if getter is None:
+                continue
+            try:
+                account = await getter()
+            except Exception as exc:
+                self.logger.debug(
+                    f"MT5 server offset probe via {getter_name} failed: "
+                    f"{type(exc).__name__}: {exc}"
+                )
+                continue
+            offset = _extract_server_offset_seconds(account)
+            if offset is None:
+                continue
+            self._server_offset_seconds = offset
+            if offset:
+                self.logger.info(f"MT5 server time offset detected: {offset}s")
+            return
+
+    def _server_time_to_utc_timestamp(self, value: Any) -> float:
+        timestamp = _coerce_epoch_seconds(value)
+        if timestamp <= 0:
+            return 0.0
+        return timestamp - float(self._server_offset_seconds or 0)
 
     def _on_order_update_push(self, orders: list[dict]) -> None:
         for order in orders:
