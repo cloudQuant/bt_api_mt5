@@ -1,3 +1,4 @@
+"""Module documentation"""
 from __future__ import annotations
 
 import asyncio
@@ -66,7 +67,9 @@ def _resolve_default_filling() -> int | None:
 
 
 class Mt5GatewayAdapter(BaseGatewayAdapter):
+    """Class Mt5GatewayAdapter"""
     def __init__(self, **kwargs: Any) -> None:
+        """__init__ method"""
         super().__init__(**kwargs)
         self._loop: asyncio.AbstractEventLoop | None = None
         self._thread: threading.Thread | None = None
@@ -92,6 +95,7 @@ class Mt5GatewayAdapter(BaseGatewayAdapter):
         self._running = False
 
     def connect(self) -> None:
+        """connect method"""
         if self._running:
             return
         if not self._login or not self._password:
@@ -111,6 +115,7 @@ class Mt5GatewayAdapter(BaseGatewayAdapter):
         return self._loop
 
     def disconnect(self) -> None:
+        """disconnect method"""
         if not self._running:
             return
         self._running = False
@@ -134,6 +139,7 @@ class Mt5GatewayAdapter(BaseGatewayAdapter):
         self.logger.info("Mt5GatewayAdapter disconnected")
 
     def subscribe_symbols(self, symbols: list[str]) -> dict[str, Any]:
+        """subscribe_symbols method"""
         resolved = [self._resolve_symbol(symbol) for symbol in symbols]
         future = asyncio.run_coroutine_threadsafe(
             self._async_subscribe(symbols, resolved), self._require_loop()
@@ -145,6 +151,7 @@ class Mt5GatewayAdapter(BaseGatewayAdapter):
         return result
 
     def get_balance(self) -> dict[str, Any]:
+        """get_balance method"""
         getter = getattr(self._client, "get_account_summary", None)
         if getter is None:
             getter = self._client.get_account
@@ -182,6 +189,7 @@ class Mt5GatewayAdapter(BaseGatewayAdapter):
         }
 
     def get_positions(self) -> list[dict[str, Any]]:
+        """get_positions method"""
         future = asyncio.run_coroutine_threadsafe(
             self._client.get_positions(), self._require_loop()
         )
@@ -206,12 +214,14 @@ class Mt5GatewayAdapter(BaseGatewayAdapter):
         return result
 
     def place_order(self, payload: dict[str, Any]) -> dict[str, Any]:
+        """place_order method"""
         future = asyncio.run_coroutine_threadsafe(
             self._async_place_order(payload), self._require_loop()
         )
         return future.result(timeout=self._timeout)
 
     def cancel_order(self, payload: dict[str, Any]) -> dict[str, Any]:
+        """cancel_order method"""
         order_id = payload.get("order_id") or payload.get("external_order_id")
         if order_id is None:
             return {"status": "error", "error": "missing order_id"}
@@ -222,6 +232,7 @@ class Mt5GatewayAdapter(BaseGatewayAdapter):
         return self._trade_result_to_dict(result)
 
     def get_bars(self, symbol: str, timeframe: str, count: int) -> list[dict[str, Any]]:
+        """get_bars method"""
         period_minutes = _TIMEFRAME_MAP.get(timeframe)
         if period_minutes is None:
             return []
@@ -248,6 +259,7 @@ class Mt5GatewayAdapter(BaseGatewayAdapter):
         ]
 
     def get_symbol_info(self, symbol: str) -> dict[str, Any]:
+        """get_symbol_info method"""
         cached = self._symbol_specs.get(symbol)
         if cached:
             return dict(cached)
@@ -271,6 +283,7 @@ class Mt5GatewayAdapter(BaseGatewayAdapter):
         return dict(spec)
 
     def get_open_orders(self) -> list[dict[str, Any]]:
+        """get_open_orders method"""
         future = asyncio.run_coroutine_threadsafe(self._client.get_orders(), self._require_loop())
         orders = future.result(timeout=self._timeout)
         result: list[dict[str, Any]] = []
