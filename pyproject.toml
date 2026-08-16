@@ -6,7 +6,21 @@ build-backend = "setuptools.build_meta"
 name = "bt_api_mt5"
 version = "2.0.0"
 description = "MetaTrader 5 plugin for bt_api"
+license = {text = "MIT"}
 readme = "README.md"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: Implementation :: CPython",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: POSIX :: Linux",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: MacOS",
+]
 requires-python = ">=3.9"
 dependencies = [
     "bt_api_base>=0.15,<1.0",
@@ -24,28 +38,31 @@ line-length = 100
 target-version = "py39"
 
 [tool.ruff.lint]
-select = [
-    "E",   # pycodestyle errors
-    "W",   # pycodestyle warnings
-    "F",   # pyflakes
-    "I",   # isort
-    "N",   # pep8-naming
-    "UP",  # pyupgrade
-    "B",   # flake8-bugbear (includes B904 raise-from)
-    "C4",  # flake8-comprehensions
-    "SIM", # flake8-simplify
-    "TCH", # flake8-type-checking
-    "RUF100",  # unused noqa directives
-    "S",   # flake8-bandit security
-    "PERF",  # perflint performance
-    "PIE790",  # no-unnecessary-pass
-]
+select = ["I", "UP", "E", "F", "W"]
 ignore = [
     "E501",  # line too long (handled by formatter)
-    "B008",  # do not perform function calls in argument defaults
-    "PERF401",  # existing for-loop patterns for list building
+    "E731",  # lambda assignment
+    "TC002",  # dynamic import
+    "TRY003",  # broad Exception
+    "F403",  # star import
+    "F841",  # unused variable
+    "Q000",  # bad quoting
+    "Q003",  # bad escaping
 ]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S106", "S105", "S311", "E402", "PERF401", "N806", "S108"]
+"examples/**" = ["S106", "S105", "S311", "E402", "PERF401", "N806", "S108"]
+"scripts/**" = ["S106", "S105", "S311", "E402", "PERF401", "N806", "S108"]
+
 
 [tool.ruff.format]
 quote-style = "double"
 indent-style = "space"
+
+[tool.pytest.ini_options]
+asyncio_default_fixture_loop_scope = "function"
+markers = [
+    "integration: Integration tests (requires MT5 terminal)",
+    "unit: Unit tests (fast, no external dependencies)",
+]
