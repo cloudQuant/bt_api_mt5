@@ -611,13 +611,33 @@ class Mt5GatewayAdapter(BaseGatewayAdapter):
     async def _async_place_order(self, payload: dict[str, Any]) -> dict[str, Any]:
         symbol = str(payload.get("data_name") or payload.get("symbol") or "")
         mt5_symbol = self._resolve_symbol(symbol)
+        if payload.get("quantity_unit") not in (None, "", "lots", "native"):
+            return {"status": "error", "error": "MT5 requires volume in lots", "data_name": symbol}
+        offset = str(payload.get("offset") or "").lower()
+        order_type = str(payload.get("order_type") or "market").lower()
+        closing = offset == "close" or order_type == "close"
+        if offset not in ("", "open", "close"):
+            return {"status": "error", "error": "unsupported MT5 offset", "data_name": symbol}
+        if payload.get("reduce_only") and not closing:
+            return {"status": "error", "error": "MT5 reduce-only requires ticket close", "data_name": symbol}
+        if closing:
+            try:
+                position_id = int(payload.get("position_id") or 0)
+            except (TypeError, ValueError):
+                position_id = 0
+            if position_id <= 0:
+                return {"status": "error", "error": "MT5 close requires a positive position_id", "data_name": symbol}
+            if order_type not in ("market", "close"):
+                return {"status": "error", "error": "MT5 ticket close only supports market orders", "data_name": symbol}
+            order_type = "close"
+        elif payload.get("position_id") is not None:
+            return {"status": "error", "error": "position_id requires close intent", "data_name": symbol}
         try:
-            volume = float(payload.get("volume") or payload.get("size") or 0.01)
+            volume = float(payload.get("volume", payload.get("size", 0.01)))
             volume = self._normalize_volume(symbol, volume)
         except (TypeError, ValueError) as exc:
             return {"status": "error", "error": str(exc), "data_name": symbol}
         side = str(payload.get("side") or "buy").lower()
-        order_type = str(payload.get("order_type") or "market").lower()
         price = payload.get("price")
         if price is not None:
             price = float(price)
@@ -666,7 +686,6 @@ class Mt5GatewayAdapter(BaseGatewayAdapter):
             else:
                 result = await self._client.sell_stop(mt5_symbol, volume, price, **request_kwargs)
         elif order_type == "close":
-            position_id = int(payload.get("position_id") or 0)
             result = await self._client.close_position(
                 mt5_symbol, position_id, volume, **request_kwargs
             )
