@@ -1,4 +1,4 @@
-# MetaTrader 5
+﻿# MetaTrader 5
 
 MetaTrader 5 plugin for bt_api, supporting multi-asset trading via MT5 Web API.
 

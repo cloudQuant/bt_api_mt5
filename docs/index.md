@@ -1,4 +1,4 @@
-# MetaTrader 5 Documentation
+﻿# MetaTrader 5 Documentation
 
 ## English
 
